@@ -11,14 +11,15 @@ This project provides a modular implementation for evaluating simultaneous wirel
 The repository includes:
 
 - distributed access point deployment
-- random user topology generation
+- AP-user serving association
 - path loss and log-normal shadowing
 - Rayleigh fading channels
 - SWIPT-assisted relaying
 - SIC-aware NOMA SINR modeling
 - SWIPT-NOMA, conventional NOMA, and OMA baselines
-- Figure 1 reconstruction
-- Figure 2 ergodic capacity reconstruction
+- publication-style Figure 1 reconstruction
+- upgraded Figure 2 ergodic capacity reconstruction
+- validation tests and CI
 
 ## Repository structure
 
@@ -26,6 +27,12 @@ The repository includes:
 src/
   config.py
   paper_params.py
+  topology.py
+  fading.py
+  ap_association.py
+  channel_realization.py
+  paper_simulation.py
+  link_budget.py
   channel.py
   clustering.py
   schemes.py
@@ -36,7 +43,17 @@ scripts/
   rebuild_fig1.py
   rebuild_fig2.py
 
+tests/
+  test_pipeline.py
+
+.github/workflows/
+  python-tests.yml
+
+figures/
+results/
+
 main.py
+run.sh
 VALIDATION.md
 requirements.txt
 ```
@@ -61,13 +78,19 @@ pip install -r requirements.txt
 
 ```bash
 python scripts/rebuild_fig1.py
-python scripts/rebuild_fig2.py --mc 200
+python scripts/rebuild_fig2.py --mc 500
 ```
 
 ## Run everything
 
 ```bash
-python main.py --mc 200
+python main.py --mc 500
+```
+
+Or:
+
+```bash
+bash run.sh
 ```
 
 ## Outputs
@@ -80,7 +103,7 @@ results/figure2_results.csv
 
 ## Validation
 
-See `VALIDATION.md` for implementation details, current limitations, and future extensions.
+See `VALIDATION.md` for implementation details, validation workflow, current limitations, and future extensions.
 
 ## Citation
 
