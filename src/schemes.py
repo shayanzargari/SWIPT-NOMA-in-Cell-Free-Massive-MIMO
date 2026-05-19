@@ -9,7 +9,9 @@ class SchemeEvaluator:
     def __init__(self, cfg):
         self.cfg = cfg
         self.tx_power = dbm_to_watt(getattr(cfg, 'ap_tx_power_dbm', 30.0))
-        self.relay_power = dbm_to_watt(getattr(cfg, 'relay_tx_power_dbm', 20.0))
+        self.relay_power_limit = dbm_to_watt(
+            getattr(cfg, 'relay_tx_power_dbm', 20.0)
+        )
         self.noise = dbm_to_watt(cfg.noise_power_dbm)
 
     def shannon(self, sinr):
@@ -19,33 +21,32 @@ class SchemeEvaluator:
         alpha_far = self.cfg.noma_alpha_far
         alpha_near = self.cfg.noma_alpha_near
 
-        direct_far = alpha_far * self.tx_power * far_gain
-        direct_interference = alpha_near * self.tx_power * far_gain
+        direct_far_signal = alpha_far * self.tx_power * far_gain
+        direct_far_interference = alpha_near * self.tx_power * far_gain
 
-        far_sinr_direct = direct_far / (
-            direct_interference + self.noise
+        direct_far_sinr = direct_far_signal / (
+            direct_far_interference + self.noise
         )
 
-        harvested_energy = (
+        harvested_power = (
             self.cfg.swipt_efficiency
             * self.cfg.power_split
             * self.tx_power
             * near_gain
         )
 
-        relay_component = harvested_energy * near_gain
+        relay_power = min(harvested_power, self.relay_power_limit)
 
-        combined_far_sinr = far_sinr_direct + (
-            relay_component / self.noise
-        )
+        relay_sinr = (relay_power * far_gain) / self.noise
+
+        combined_far_sinr = direct_far_sinr + relay_sinr
 
         sic_noise = self.cfg.sic_residual * self.tx_power * near_gain
 
         near_sinr = (
             alpha_near * self.tx_power * near_gain
         ) / (
-            self.noise + sic_noise
-        )
+            self.noise + sic_noise)
 
         return (
             self.shannon(combined_far_sinr)
@@ -59,8 +60,7 @@ class SchemeEvaluator:
         far_sinr = (
             alpha_far * self.tx_power * far_gain
         ) / (
-            alpha_near * self.tx_power * far_gain + self.noise
-        )
+            alpha_near * self.tx_power * far_gain + self.noise)
 
         near_sinr = (
             alpha_near * self.tx_power * near_gain
