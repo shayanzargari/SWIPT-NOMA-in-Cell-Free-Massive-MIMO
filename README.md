@@ -2,13 +2,11 @@
 
 Simulation code for the paper **SWIPT-NOMA in Cell-Free Massive MIMO**.
 
-This repository reconstructs the system model and ergodic capacity comparison presented in the paper using a reproducible Monte Carlo simulation framework.
+This repository contains the simulation framework used to evaluate simultaneous wireless information and power transfer (SWIPT) with non-orthogonal multiple access (NOMA) in a cell-free massive MIMO network.
 
 ## Overview
 
-This project provides a modular implementation for evaluating simultaneous wireless information and power transfer (SWIPT) with non-orthogonal multiple access (NOMA) in a cell-free massive MIMO network.
-
-The repository includes:
+The implementation includes:
 
 - distributed access point deployment
 - AP-user serving association
@@ -17,15 +15,14 @@ The repository includes:
 - SWIPT-assisted relaying
 - SIC-aware NOMA SINR modeling
 - SWIPT-NOMA, conventional NOMA, and OMA baselines
-- publication-style Figure 1 reconstruction
-- upgraded Figure 2 ergodic capacity reconstruction
+- Figure 1 system model generation
+- Figure 2 ergodic capacity generation
 - validation tests and CI
 
 ## Repository structure
 
 ```text
 src/
-  config.py
   paper_params.py
   topology.py
   fading.py
@@ -33,10 +30,8 @@ src/
   channel_realization.py
   paper_simulation.py
   link_budget.py
-  channel.py
   clustering.py
   schemes.py
-  simulation.py
   plotting.py
 
 scripts/
@@ -46,19 +41,13 @@ scripts/
 tests/
   test_pipeline.py
 
-.github/workflows/
-  python-tests.yml
-
-figures/
-results/
-
 main.py
 run.sh
 VALIDATION.md
 requirements.txt
 ```
 
-## Install
+## Installation
 
 ```bash
 python -m venv .venv
@@ -74,20 +63,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Rebuild figures
+## Generate figures
 
 ```bash
 python scripts/rebuild_fig1.py
 python scripts/rebuild_fig2.py --mc 500
 ```
 
-## Run everything
+To run the complete workflow:
 
 ```bash
 python main.py --mc 500
 ```
 
-Or:
+or
 
 ```bash
 bash run.sh
@@ -103,7 +92,9 @@ results/figure2_results.csv
 
 ## Validation
 
-See `VALIDATION.md` for implementation details, validation workflow, current limitations, and future extensions.
+```bash
+pytest
+```
 
 ## Citation
 
