@@ -53,13 +53,18 @@ def pair_channel_gain(user_a, user_b, params, rng):
     return np.abs(np.sqrt(beta) * g) ** 2
 
 
+def prelog_factor(params):
+    tc = params['coherence_block']
+    tau = min(params['pilot_length'], tc - 1)
+    return (tc - tau) / tc
+
+
 def paper_sinr_rates(c_head, c_far, c_cross, h12_sq, beta_ps, rho, params):
     noise = dbm_to_watt(params['noise_power_dbm'])
     p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     p_head = params['power_ratio_near'] * p_cluster
     p_far = params['power_ratio_far'] * p_cluster
-    kappa = (params['coherence_block'] - params['pilot_length'] / max(params['coherence_block'], 1))
-    kappa = max(kappa / params['coherence_block'], 1.0 / params['coherence_block'])
+    kappa = prelog_factor(params)
 
     ch = np.abs(c_head) ** 2
     cf = np.abs(c_far) ** 2
@@ -87,24 +92,27 @@ def conventional_noma_rate(c_head, c_far, params):
     p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     p_head = params['power_ratio_near'] * p_cluster
     p_far = params['power_ratio_far'] * p_cluster
+    kappa = prelog_factor(params)
 
     ch = np.abs(c_head) ** 2
     cf = np.abs(c_far) ** 2
 
-    r_head = np.log2(1.0 + p_head * ch / noise)
-    r_far = np.log2(1.0 + (p_far * cf) / (p_head * cf + noise))
+    r_head = kappa * np.log2(1.0 + p_head * ch / noise)
+    r_far = kappa * np.log2(1.0 + (p_far * cf) / (p_head * cf + noise))
     return float(r_head + r_far)
 
 
 def oma_rate(c_head, c_far, num_users, params):
     noise = dbm_to_watt(params['noise_power_dbm'])
     p_cluster = dbm_to_watt(params['cluster_power_dbm'])
+    kappa = prelog_factor(params)
     ch = np.abs(c_head) ** 2
     cf = np.abs(c_far) ** 2
     loading = max(0.0, 1.0 - num_users / 200.0)
     return float(
         0.5
         * loading
+        * kappa
         * (np.log2(1.0 + p_cluster * ch / noise) + np.log2(1.0 + p_cluster * cf / noise))
     )
 
@@ -164,4 +172,27 @@ def simulate_vs_users(rho=1.0, params=None):
         for key, val in totals.items():
             row[key] = val / cfg['monte_carlo']
         rows.append(row)
+    return rows
+
+
+def simulate_vs_power_splitting(params=None):
+    cfg = dict(PAPER_PARAMS)
+    if params:
+        cfg.update(params)
+    rng = np.random.default_rng(cfg['seed'] + 404)
+    rows = []
+
+    for beta_ps in np.round(np.arange(0.02, 0.91, 0.02), 2):
+        total_rho_1 = 0.0
+        total_rho_085 = 0.0
+        for _ in range(cfg['monte_carlo']):
+            _, _, rate_1 = simulate_one_topology(200, beta_ps, 1.0, cfg, rng)
+            _, _, rate_085 = simulate_one_topology(200, beta_ps, 0.85, cfg, rng)
+            total_rho_1 += rate_1
+            total_rho_085 += rate_085
+        rows.append({
+            'power_splitting_ratio': beta_ps,
+            'rho_1': total_rho_1 / cfg['monte_carlo'],
+            'rho_085': total_rho_085 / cfg['monte_carlo'],
+        })
     return rows
