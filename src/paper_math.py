@@ -19,10 +19,22 @@ def rayleigh_gain(beta, rng):
 def pair_nearest_users(users):
     remaining = list(range(len(users)))
     pairs = []
+
     while len(remaining) >= 2:
-        first = remaining.pop(0)
-        distances = np.linalg.norm(users[remaining] - users[first], axis=1)
-        second_pos = int(np.argmin(distances))
-        second = remaining.pop(second_pos)
+        best_pair = None
+        best_distance = np.inf
+
+        for i, first in enumerate(remaining[:-1]):
+            rest = remaining[i + 1:]
+            distances = np.linalg.norm(users[rest] - users[first], axis=1)
+            j = int(np.argmin(distances))
+            if distances[j] < best_distance:
+                best_distance = float(distances[j])
+                best_pair = (first, rest[j])
+
+        first, second = best_pair
         pairs.append((first, second))
+        remaining.remove(first)
+        remaining.remove(second)
+
     return pairs
