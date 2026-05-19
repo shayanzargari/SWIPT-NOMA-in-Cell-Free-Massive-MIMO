@@ -36,9 +36,7 @@ class SchemeEvaluator:
         )
 
         relay_power = min(harvested_power, self.relay_power_limit)
-
         relay_sinr = (relay_power * far_gain) / self.noise
-
         combined_far_sinr = direct_far_sinr + relay_sinr
 
         sic_noise = self.cfg.sic_residual * self.tx_power * near_gain
@@ -46,7 +44,8 @@ class SchemeEvaluator:
         near_sinr = (
             alpha_near * self.tx_power * near_gain
         ) / (
-            self.noise + sic_noise)
+            self.noise + sic_noise
+        )
 
         return (
             self.shannon(combined_far_sinr)
@@ -60,7 +59,8 @@ class SchemeEvaluator:
         far_sinr = (
             alpha_far * self.tx_power * far_gain
         ) / (
-            alpha_near * self.tx_power * far_gain + self.noise)
+            alpha_near * self.tx_power * far_gain + self.noise
+        )
 
         near_sinr = (
             alpha_near * self.tx_power * near_gain
