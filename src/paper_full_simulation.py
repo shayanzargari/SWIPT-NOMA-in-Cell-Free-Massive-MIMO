@@ -5,9 +5,6 @@ from src.paper_math import dbm_to_watt, pair_nearest_users, path_loss
 from src.paper_params import PAPER_PARAMS
 
 
-RAYLEIGH_MAG_MEAN = np.sqrt(np.pi) / 2.0
-
-
 def cn(shape, rng):
     return (rng.normal(size=shape) + 1j * rng.normal(size=shape)) / np.sqrt(2.0)
 
@@ -36,17 +33,24 @@ def pair_arrays(aps, users, pairs, params, rng):
 
 
 def reorder_cluster_heads(beta, h):
-    m, n, _ = beta.shape
     ordered_beta = beta.copy()
     ordered_h = h.copy()
-
     effective = np.sum(np.abs(h) ** 2, axis=0)
-    for cluster_idx in range(n):
+
+    for cluster_idx in range(beta.shape[1]):
         if effective[cluster_idx, 1] > effective[cluster_idx, 0]:
             ordered_beta[:, cluster_idx, :] = ordered_beta[:, cluster_idx, [1, 0]]
             ordered_h[:, cluster_idx, :] = ordered_h[:, cluster_idx, [1, 0]]
 
     return ordered_beta, ordered_h
+
+
+def enforce_ap_power(num_clusters, params):
+    cluster_power = dbm_to_watt(params['cluster_power_dbm'])
+    ap_limit = dbm_to_watt(params['ap_power_dbm'])
+    total_power = num_clusters * cluster_power
+    scale = min(1.0, ap_limit / max(total_power, 1e-30))
+    return cluster_power * scale
 
 
 def mmse_mu(beta, params, tau):
@@ -58,11 +62,9 @@ def mmse_mu(beta, params, tau):
     return numerator / np.maximum(denominator, 1e-30)
 
 
-def shared_pilot_estimates(mu, rng):
+def shared_pilot_variable(mu, rng):
     m, n, _ = mu.shape
-    v = cn((m, n), rng)
-    h_hat = np.sqrt(np.maximum(mu, 0.0)) * v[:, :, None]
-    return v, h_hat
+    return cn((m, n), rng)
 
 
 def beamforming_phases(v):
@@ -70,13 +72,20 @@ def beamforming_phases(v):
 
 
 def c_matrix(h, phases):
-    # C[transmitted_cluster, receiver_cluster, local_user]
     return np.einsum('mrk,mt->trk', h, phases)
 
 
-def expected_c(mu):
-    # E[C[n,n,k]] = sum_m sqrt(mu[m,n,k]) E{|CN(0,1)|}
-    return RAYLEIGH_MAG_MEAN * np.sum(np.sqrt(np.maximum(mu, 0.0)), axis=0)
+def expected_c_monte_carlo(mu, samples, rng):
+    m, n, k = mu.shape
+    acc = np.zeros((n, k), dtype=complex)
+
+    for _ in range(samples):
+        v = cn((m, n), rng)
+        h_hat = np.sqrt(np.maximum(mu, 0.0)) * v[:, :, None]
+        phase = beamforming_phases(v)
+        acc += np.einsum('mnk,mn->nk', h_hat, phase)
+
+    return acc / max(samples, 1)
 
 
 def inter_user_channel(users, pair, params, rng):
@@ -92,15 +101,20 @@ def prelog_noma(num_clusters, params):
     return max((tc - tau) / tc, 0.0)
 
 
-def prelog_oma(num_users, params):
+def prelog_oma(num_clusters, params):
     tc = params['coherence_block']
-    tau = min(num_users, tc)
+    tau = min(2 * num_clusters, tc)
     return max((tc - tau) / tc, 0.0)
 
 
-def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params):
+def exact_harvested_power(C, cluster_idx, beta_ps, eta, p_cluster):
+    symbols = np.ones(C.shape[0], dtype=complex)
+    received_rf = np.sum(np.sqrt(p_cluster) * C[:, cluster_idx, 0] * symbols)
+    return beta_ps * eta * np.abs(received_rf) ** 2
+
+
+def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster):
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
-    p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     p1 = params['power_ratio_near'] * p_cluster
     p2 = params['power_ratio_far'] * p_cluster
 
@@ -126,28 +140,20 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params):
         sic_prop + inter_head + sigma2 / max(1.0 - beta_ps, 1e-12)
     )
 
-    p_eh = beta_ps * params['swipt_efficiency'] * np.sum(
-        p_cluster * np.abs(C[:, cluster_idx, 0]) ** 2
-    )
+    p_eh = exact_harvested_power(C, cluster_idx, beta_ps, params['swipt_efficiency'], p_cluster)
+    relay_signal = np.sqrt(max(p_eh, 0.0)) * h12 / max(rho, 1e-12)
+    direct_signal = c12 * np.sqrt(p2)
+    numerator_far = np.abs(direct_signal + relay_signal) ** 2
 
-    numerator_far = np.abs(
-        np.sqrt(max(p_eh, 0.0)) * np.abs(h12) / max(rho, 1e-12)
-        + c12 * np.sqrt(p2)
-    ) ** 2
-    denominator_far = (
-        np.abs(c12) ** 2 * p1
-        + inter_far
-        + p_eh * np.abs(h12) ** 2 * ((1.0 - rho ** 2) / max(rho ** 2, 1e-12))
-        + sigma2
-    )
+    relay_error = p_eh * np.abs(h12) ** 2 * ((1.0 - rho ** 2) / max(rho ** 2, 1e-12))
+    denominator_far = np.abs(c12) ** 2 * p1 + inter_far + relay_error + sigma2
     sinr_far = numerator_far / max(denominator_far, 1e-30)
 
     return sinr_head, sinr_far
 
 
-def conventional_noma_rate(C, cluster_idx, params, kappa):
+def conventional_noma_rate(C, cluster_idx, params, kappa, p_cluster):
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
-    p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     p1 = params['power_ratio_near'] * p_cluster
     p2 = params['power_ratio_far'] * p_cluster
     c1 = C[cluster_idx, cluster_idx, 0]
@@ -157,9 +163,8 @@ def conventional_noma_rate(C, cluster_idx, params, kappa):
     return float(kappa * (r1 + r2))
 
 
-def oma_rate(C, cluster_idx, params, kappa):
+def oma_rate(C, cluster_idx, params, kappa, p_cluster):
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
-    p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     c1 = C[cluster_idx, cluster_idx, 0]
     c2 = C[cluster_idx, cluster_idx, 1]
     r1 = np.log2(1.0 + p_cluster * np.abs(c1) ** 2 / sigma2)
@@ -175,13 +180,14 @@ def one_realization(num_users, beta_ps, rho, params, rng):
 
     tau = min(num_clusters, params['coherence_block'])
     mu = mmse_mu(beta, params, tau)
-    v, _ = shared_pilot_estimates(mu, rng)
+    v = shared_pilot_variable(mu, rng)
     phases = beamforming_phases(v)
     C = c_matrix(h, phases)
-    EC = expected_c(mu)
+    EC = expected_c_monte_carlo(mu, params['expectation_samples'], rng)
 
+    p_cluster = enforce_ap_power(num_clusters, params)
     kappa_noma = prelog_noma(num_clusters, params)
-    kappa_oma = prelog_oma(num_users, params)
+    kappa_oma = prelog_oma(num_clusters, params)
 
     swipt = 0.0
     noma = 0.0
@@ -189,13 +195,16 @@ def one_realization(num_users, beta_ps, rho, params, rng):
 
     for cluster_idx, pair in enumerate(pairs):
         h12 = inter_user_channel(users, pair, params, rng)
-        sinr1, sinr2 = eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params)
+        sinr1, sinr2 = eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster)
         swipt += kappa_noma * (np.log2(1.0 + sinr1) + np.log2(1.0 + sinr2))
-        noma += conventional_noma_rate(C, cluster_idx, params, kappa_noma)
-        oma += oma_rate(C, cluster_idx, params, kappa_oma)
+        noma += conventional_noma_rate(C, cluster_idx, params, kappa_noma, p_cluster)
+        oma += oma_rate(C, cluster_idx, params, kappa_oma, p_cluster)
 
-    divisor = max(num_clusters, 1)
-    return oma / divisor, noma / divisor, swipt / divisor
+    if params.get('rate_output', 'sum') == 'average':
+        divisor = max(num_clusters, 1)
+        return oma / divisor, noma / divisor, swipt / divisor
+
+    return oma, noma, swipt
 
 
 def simulate_users(rho, params=None):
@@ -231,13 +240,14 @@ def simulate_power_splitting(params=None):
         cfg.update(params)
     rng = np.random.default_rng(cfg['seed'] + 404)
     rows = []
+    fig4_users = cfg.get('figure4_users', 200)
 
     for beta_ps in np.round(np.arange(0.02, 0.91, 0.02), 2):
         total_1 = 0.0
         total_085 = 0.0
         for _ in range(cfg['monte_carlo']):
-            _, _, rate_1 = one_realization(200, beta_ps, 1.0, cfg, rng)
-            _, _, rate_085 = one_realization(200, beta_ps, 0.85, cfg, rng)
+            _, _, rate_1 = one_realization(fig4_users, beta_ps, 1.0, cfg, rng)
+            _, _, rate_085 = one_realization(fig4_users, beta_ps, 0.85, cfg, rng)
             total_1 += rate_1
             total_085 += rate_085
         rows.append({
