@@ -107,13 +107,12 @@ def prelog_oma(num_clusters, params):
     return max((tc - tau) / tc, 0.0)
 
 
-def exact_harvested_power(C, cluster_idx, beta_ps, eta, p_cluster):
-    symbols = np.ones(C.shape[0], dtype=complex)
+def exact_harvested_power(C, cluster_idx, beta_ps, eta, p_cluster, symbols):
     received_rf = np.sum(np.sqrt(p_cluster) * C[:, cluster_idx, 0] * symbols)
     return beta_ps * eta * np.abs(received_rf) ** 2
 
 
-def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster):
+def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols):
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
     p1 = params['power_ratio_near'] * p_cluster
     p2 = params['power_ratio_far'] * p_cluster
@@ -140,12 +139,12 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster):
         sic_prop + inter_head + sigma2 / max(1.0 - beta_ps, 1e-12)
     )
 
-    p_eh = exact_harvested_power(C, cluster_idx, beta_ps, params['swipt_efficiency'], p_cluster)
-    relay_signal = np.sqrt(max(p_eh, 0.0)) * h12 / max(rho, 1e-12)
+    p_eh = exact_harvested_power(C, cluster_idx, beta_ps, params['swipt_efficiency'], p_cluster, symbols)
+    relay_signal = rho * np.sqrt(max(p_eh, 0.0)) * h12
     direct_signal = c12 * np.sqrt(p2)
     numerator_far = np.abs(direct_signal + relay_signal) ** 2
 
-    relay_error = p_eh * np.abs(h12) ** 2 * ((1.0 - rho ** 2) / max(rho ** 2, 1e-12))
+    relay_error = p_eh * np.abs(h12) ** 2 * max(1.0 - rho ** 2, 0.0)
     denominator_far = np.abs(c12) ** 2 * p1 + inter_far + relay_error + sigma2
     sinr_far = numerator_far / max(denominator_far, 1e-30)
 
@@ -188,6 +187,7 @@ def one_realization(num_users, beta_ps, rho, params, rng):
     p_cluster = enforce_ap_power(num_clusters, params)
     kappa_noma = prelog_noma(num_clusters, params)
     kappa_oma = prelog_oma(num_clusters, params)
+    symbols = cn(num_clusters, rng)
 
     swipt = 0.0
     noma = 0.0
@@ -195,7 +195,7 @@ def one_realization(num_users, beta_ps, rho, params, rng):
 
     for cluster_idx, pair in enumerate(pairs):
         h12 = inter_user_channel(users, pair, params, rng)
-        sinr1, sinr2 = eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster)
+        sinr1, sinr2 = eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols)
         swipt += kappa_noma * (np.log2(1.0 + sinr1) + np.log2(1.0 + sinr2))
         noma += conventional_noma_rate(C, cluster_idx, params, kappa_noma, p_cluster)
         oma += oma_rate(C, cluster_idx, params, kappa_oma, p_cluster)
