@@ -11,41 +11,33 @@ bash run.sh
 Or execute manually:
 
 ```bash
-python scripts/rebuild_fig1.py
-python scripts/rebuild_fig2.py --mc 500
+python scripts/rebuild_fig2.py
+python scripts/rebuild_fig3.py
+python scripts/rebuild_fig4.py
 ```
 
 Expected outputs:
 
 ```text
-figures/figure1_system_model.png
 figures/figure2_ergodic_capacity.png
+figures/figure3_ergodic_capacity_rho085.png
+figures/figure4_power_splitting_ratio.png
 results/figure2_results.csv
+results/figure3_results.csv
+results/figure4_results.csv
 ```
-
-## Figure 1
-
-The Figure 1 reconstruction includes:
-
-- distributed access points
-- CPU/controller
-- near and far NOMA users
-- SWIPT-assisted relaying
-- decode-forward relay links
-- energy-transfer annotations
 
 ## Figure 2
 
-The Figure 2 workflow includes:
+Ergodic sum capacity versus the number of users for OMA, conventional NOMA, and SWIPT-NOMA cases 1, 2, and 3 with rho = 1.
 
-- random AP/user deployment
-- AP-user serving association
-- large-scale fading
-- Rayleigh fading
-- path loss and shadowing
-- SWIPT-assisted relaying
-- SIC-aware NOMA SINR modeling
-- Monte Carlo averaging
+## Figure 3
+
+Ergodic sum capacity versus the number of users for OMA, conventional NOMA, and SWIPT-NOMA cases 1, 2, and 3 with rho = 0.85.
+
+## Figure 4
+
+Ergodic sum capacity versus power-splitting ratio for rho = 1 and rho = 0.85.
 
 ## Validation tests
 
