@@ -1,12 +1,8 @@
-# Validation Notes
-
-## Current repository status
-
-This repository implements a reproducible Monte Carlo simulation workflow for evaluating SWIPT-NOMA in a cell-free massive MIMO system.
+# Validation
 
 ## Reproducibility workflow
 
-Run the complete reproduction pipeline:
+Run the complete workflow:
 
 ```bash
 bash run.sh
@@ -37,17 +33,10 @@ The Figure 1 reconstruction includes:
 - SWIPT-assisted relaying
 - decode-forward relay links
 - energy-transfer annotations
-- publication-style network layout
 
 ## Figure 2
 
-The Figure 2 reconstruction reproduces the qualitative trend reported in the paper:
-
-- SWIPT-NOMA achieves the highest ergodic sum rate
-- conventional NOMA outperforms OMA
-- ergodic rate changes with user count and pairing
-
-The implementation includes:
+The Figure 2 workflow includes:
 
 - random AP/user deployment
 - AP-user serving association
@@ -60,23 +49,10 @@ The implementation includes:
 
 ## Validation tests
 
-The repository includes:
-
-- unit tests for the simulation pipeline
-- CI automation through GitHub Actions
-- reproducible seeded topology generation
-
 Run tests locally:
 
 ```bash
 pytest
 ```
 
-## Remaining future improvements
-
-Possible future extensions:
-
-- exact analytical derivation matching every equation in the paper
-- advanced distributed beamforming optimization
-- multi-antenna AP processing
-- exact numerical overlap with publication curves under original hidden seeds/settings
+The repository also includes automated CI testing through GitHub Actions.
