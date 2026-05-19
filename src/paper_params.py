@@ -6,7 +6,6 @@ PAPER_PARAMS = {
     'user_step': 5,
     'monte_carlo': 100,
     'coherence_block': 200,
-    'pilot_length': 200,
     'bandwidth_hz': 20e6,
     'noise_power_dbm': -96.0,
     'cluster_power_dbm': -30.0,
@@ -21,5 +20,7 @@ PAPER_PARAMS = {
     'rho_cases': (1.0, 0.85),
     'power_ratio_near': 0.3,
     'power_ratio_far': 0.7,
+    'expectation_samples': 200,
+    'figure4_users': 200,
     'seed': 42,
 }
