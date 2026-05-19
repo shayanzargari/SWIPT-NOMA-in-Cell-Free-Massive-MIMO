@@ -4,11 +4,11 @@ from src.paper_params import PAPER_PARAMS
 
 
 class NetworkTopology:
-    def __init__(self, params=None):
+    def __init__(self, params=None, rng=None):
         self.params = dict(PAPER_PARAMS)
         if params:
             self.params.update(params)
-        self.rng = np.random.default_rng(self.params['seed'])
+        self.rng = rng if rng is not None else np.random.default_rng(self.params['seed'])
 
     def deploy_access_points(self):
         area = self.params['area_size']
