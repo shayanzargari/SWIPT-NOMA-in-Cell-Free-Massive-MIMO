@@ -1,12 +1,12 @@
 # SWIPT-NOMA in Cell-Free Massive MIMO
 
-Reproducible simulation code for the paper **SWIPT-NOMA in Cell-Free Massive MIMO**.
+Simulation code for the paper **SWIPT-NOMA in Cell-Free Massive MIMO**.
 
-This repository rebuilds the paper-style system model and ergodic capacity comparison using a transparent Monte Carlo simulation.
+This repository rebuilds the system model and ergodic capacity comparison presented in the paper using a Monte Carlo simulation framework.
 
-## Reproducibility note
+## Overview
 
-The paper describes the system model and simulation assumptions, but some final analytical substitutions are omitted for brevity. This repository therefore implements a faithful reproducible simulation based on the stated model rather than claiming to recover unavailable original source code.
+This project provides a clean and reproducible implementation of the main simulation workflow for evaluating simultaneous wireless information and power transfer (SWIPT) with non-orthogonal multiple access (NOMA) in a cell-free massive MIMO network.
 
 ## Implemented features
 
