@@ -13,7 +13,7 @@ class ChannelRealization:
             self.params.update(params)
 
         self.rng = np.random.default_rng(self.params['seed'])
-        self.topology = NetworkTopology(self.params)
+        self.topology = NetworkTopology(self.params, rng=self.rng)
         self.association = APAssociation(self.params)
 
     def generate(self, num_users):
