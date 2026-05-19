@@ -2,7 +2,8 @@
 
 set -e
 
-python scripts/rebuild_fig1.py
-python scripts/rebuild_fig2.py --mc 500
+python scripts/rebuild_fig2.py
+python scripts/rebuild_fig3.py
+python scripts/rebuild_fig4.py
 
-echo "All paper figures generated successfully."
+echo "Figures 2, 3, and 4 generated successfully."
