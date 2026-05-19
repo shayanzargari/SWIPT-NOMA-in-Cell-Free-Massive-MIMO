@@ -1,4 +1,9 @@
+from pathlib import Path
 import argparse
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.paper_params import PAPER_PARAMS
 from src.paper_simulation import PaperSimulation
@@ -18,7 +23,16 @@ params['monte_carlo'] = args.mc
 simulation = PaperSimulation(params)
 df = simulation.run()
 
-df.to_csv('results/figure2_results.csv', index=False)
-plot_capacity(df, 'figures/figure2_ergodic_capacity.png')
+results_dir = PROJECT_ROOT / 'results'
+figures_dir = PROJECT_ROOT / 'figures'
+
+results_dir.mkdir(exist_ok=True)
+figures_dir.mkdir(exist_ok=True)
+
+csv_path = results_dir / 'figure2_results.csv'
+fig_path = figures_dir / 'figure2_ergodic_capacity.png'
+
+df.to_csv(csv_path, index=False)
+plot_capacity(df, fig_path)
 
 print('Figure 2 reconstruction completed successfully.')
