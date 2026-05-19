@@ -19,5 +19,6 @@ PAPER_PARAMS = {
     'rho_cases': (1.0, 0.85),
     'power_ratio_near': 0.3,
     'power_ratio_far': 0.7,
+    'interference_leakage': 1e-5,
     'seed': 42,
 }
