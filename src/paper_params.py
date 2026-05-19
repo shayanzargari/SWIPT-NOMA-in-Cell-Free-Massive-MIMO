@@ -22,5 +22,6 @@ PAPER_PARAMS = {
     'power_ratio_far': 0.7,
     'expectation_samples': 200,
     'figure4_users': 200,
+    'rate_output': 'sum',
     'seed': 42,
 }
