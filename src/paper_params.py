@@ -2,6 +2,7 @@ PAPER_PARAMS = {
     'area_size': 1000.0,
     'num_aps': 64,
     'num_ap_antennas': 1,
+    'serving_aps': 8,
     'num_users_min': 2,
     'num_users_max': 20,
     'user_step': 2,
