@@ -2,24 +2,44 @@
 
 Simulation code for the paper **SWIPT-NOMA in Cell-Free Massive MIMO**.
 
-This repository rebuilds the system model and ergodic capacity comparison presented in the paper using a Monte Carlo simulation framework.
+This repository reconstructs the system model and ergodic capacity comparison presented in the paper using a reproducible Monte Carlo simulation framework.
 
 ## Overview
 
-This project provides a clean and reproducible implementation of the main simulation workflow for evaluating simultaneous wireless information and power transfer (SWIPT) with non-orthogonal multiple access (NOMA) in a cell-free massive MIMO network.
+This project provides a modular implementation for evaluating simultaneous wireless information and power transfer (SWIPT) with non-orthogonal multiple access (NOMA) in a cell-free massive MIMO network.
 
-## Implemented features
+The repository includes:
 
-- Cell-free massive MIMO deployment
-- Random AP and user locations
-- Distance-based path loss and log-normal shadowing
-- Rayleigh fading
-- Distributed conjugate beamforming style effective channels
-- SWIPT-NOMA rate model
-- Conventional NOMA baseline
-- OMA baseline
-- Figure 1 system model reconstruction
+- distributed access point deployment
+- random user topology generation
+- path loss and log-normal shadowing
+- Rayleigh fading channels
+- SWIPT-assisted relaying
+- SIC-aware NOMA SINR modeling
+- SWIPT-NOMA, conventional NOMA, and OMA baselines
+- Figure 1 reconstruction
 - Figure 2 ergodic capacity reconstruction
+
+## Repository structure
+
+```text
+src/
+  config.py
+  paper_params.py
+  channel.py
+  clustering.py
+  schemes.py
+  simulation.py
+  plotting.py
+
+scripts/
+  rebuild_fig1.py
+  rebuild_fig2.py
+
+main.py
+VALIDATION.md
+requirements.txt
+```
 
 ## Install
 
@@ -44,12 +64,6 @@ python scripts/rebuild_fig1.py
 python scripts/rebuild_fig2.py --mc 200
 ```
 
-For a faster smoke test:
-
-```bash
-python scripts/rebuild_fig2.py --mc 20
-```
-
 ## Run everything
 
 ```bash
@@ -63,6 +77,10 @@ figures/figure1_system_model.png
 figures/figure2_ergodic_capacity.png
 results/figure2_results.csv
 ```
+
+## Validation
+
+See `VALIDATION.md` for implementation details, current limitations, and future extensions.
 
 ## Citation
 
