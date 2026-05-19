@@ -23,11 +23,10 @@ def large_scale_coefficients(aps, users, params):
 
 
 def mmse_estimation_variance(beta, params):
-    tau = params['pilot_length']
     pilot_power = dbm_to_watt(params['pilot_power_dbm'])
     noise = dbm_to_watt(params['noise_power_dbm'])
-    denom = tau * pilot_power * np.sum(beta, axis=1, keepdims=True) + noise
-    return (tau * pilot_power * beta ** 2) / np.maximum(denom, 1e-30)
+    denom = pilot_power * np.sum(beta, axis=1, keepdims=True) + noise
+    return (pilot_power * beta ** 2) / np.maximum(denom, 1e-30)
 
 
 def estimated_channels(mu, rng):
@@ -53,18 +52,18 @@ def pair_channel_gain(user_a, user_b, params, rng):
     return np.abs(np.sqrt(beta) * g) ** 2
 
 
-def prelog_factor(params):
+def prelog_factor(num_clusters, params):
     tc = params['coherence_block']
-    tau = min(params['pilot_length'], tc - 1)
-    return (tc - tau) / tc
+    tau = min(num_clusters, tc)
+    return max((tc - tau) / tc, 0.0)
 
 
-def paper_sinr_rates(c_head, c_far, c_cross, h12_sq, beta_ps, rho, params):
+def paper_sinr_rates(c_head, c_far, c_cross, h12_sq, beta_ps, rho, params, num_clusters):
     noise = dbm_to_watt(params['noise_power_dbm'])
     p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     p_head = params['power_ratio_near'] * p_cluster
     p_far = params['power_ratio_far'] * p_cluster
-    kappa = prelog_factor(params)
+    kappa = prelog_factor(num_clusters, params)
 
     ch = np.abs(c_head) ** 2
     cf = np.abs(c_far) ** 2
@@ -87,12 +86,12 @@ def paper_sinr_rates(c_head, c_far, c_cross, h12_sq, beta_ps, rho, params):
     return float(r_head + r_far)
 
 
-def conventional_noma_rate(c_head, c_far, params):
+def conventional_noma_rate(c_head, c_far, params, num_clusters):
     noise = dbm_to_watt(params['noise_power_dbm'])
     p_cluster = dbm_to_watt(params['cluster_power_dbm'])
     p_head = params['power_ratio_near'] * p_cluster
     p_far = params['power_ratio_far'] * p_cluster
-    kappa = prelog_factor(params)
+    kappa = prelog_factor(num_clusters, params)
 
     ch = np.abs(c_head) ** 2
     cf = np.abs(c_far) ** 2
@@ -105,14 +104,12 @@ def conventional_noma_rate(c_head, c_far, params):
 def oma_rate(c_head, c_far, num_users, params):
     noise = dbm_to_watt(params['noise_power_dbm'])
     p_cluster = dbm_to_watt(params['cluster_power_dbm'])
-    kappa = prelog_factor(params)
     ch = np.abs(c_head) ** 2
     cf = np.abs(c_far) ** 2
     loading = max(0.0, 1.0 - num_users / 200.0)
     return float(
         0.5
         * loading
-        * kappa
         * (np.log2(1.0 + p_cluster * ch / noise) + np.log2(1.0 + p_cluster * cf / noise))
     )
 
@@ -128,6 +125,7 @@ def simulate_one_topology(num_users, beta_ps, rho, params, rng):
     swipt_total = 0.0
     noma_total = 0.0
     oma_total = 0.0
+    num_clusters = max(len(pairs), 1)
 
     for user_a, user_b in pairs:
         h_pair = true_channels[:, [user_a, user_b]]
@@ -140,8 +138,10 @@ def simulate_one_topology(num_users, beta_ps, rho, params, rng):
         c_cross = c_pair[far_idx]
         h12_sq = pair_channel_gain(users[user_a], users[user_b], params, rng)
 
-        swipt_total += paper_sinr_rates(c_head, c_far, c_cross, h12_sq, beta_ps, rho, params)
-        noma_total += conventional_noma_rate(c_head, c_far, params)
+        swipt_total += paper_sinr_rates(
+            c_head, c_far, c_cross, h12_sq, beta_ps, rho, params, num_clusters
+        )
+        noma_total += conventional_noma_rate(c_head, c_far, params, num_clusters)
         oma_total += oma_rate(c_head, c_far, num_users, params)
 
     divisor = max(len(pairs), 1)
