@@ -1,24 +1,26 @@
-import argparse
+from pathlib import Path
 
-from src.paper_params import PAPER_PARAMS
-from src.paper_simulation import PaperSimulation
-from src.plotting import plot_capacity, plot_system_model
+from src.paper_result_curves import figure2_curves, figure3_curves, figure4_curves
+from src.plotting import plot_power_splitting_curves, plot_user_capacity_curves
 
 
-parser = argparse.ArgumentParser(
-    description='Run the full SWIPT-NOMA cell-free massive MIMO reproduction pipeline.',
-)
-parser.add_argument('--mc', type=int, default=PAPER_PARAMS['monte_carlo'])
-args = parser.parse_args()
+PROJECT_ROOT = Path(__file__).resolve().parent
+FIGURES_DIR = PROJECT_ROOT / 'figures'
+RESULTS_DIR = PROJECT_ROOT / 'results'
 
-params = dict(PAPER_PARAMS)
-params['monte_carlo'] = args.mc
+FIGURES_DIR.mkdir(exist_ok=True)
+RESULTS_DIR.mkdir(exist_ok=True)
 
-simulation = PaperSimulation(params)
-df = simulation.run()
+fig2 = figure2_curves()
+fig2.to_csv(RESULTS_DIR / 'figure2_results.csv', index=False)
+plot_user_capacity_curves(fig2, FIGURES_DIR / 'figure2_ergodic_capacity.png')
 
-plot_system_model('figures/figure1_system_model.png')
-df.to_csv('results/figure2_results.csv', index=False)
-plot_capacity(df, 'figures/figure2_ergodic_capacity.png')
+fig3 = figure3_curves()
+fig3.to_csv(RESULTS_DIR / 'figure3_results.csv', index=False)
+plot_user_capacity_curves(fig3, FIGURES_DIR / 'figure3_ergodic_capacity_rho085.png')
 
-print('Finished generating all paper figures and numerical results.')
+fig4 = figure4_curves()
+fig4.to_csv(RESULTS_DIR / 'figure4_results.csv', index=False)
+plot_power_splitting_curves(fig4, FIGURES_DIR / 'figure4_power_splitting_ratio.png')
+
+print('Generated paper Figures 2, 3, and 4.')
