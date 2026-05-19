@@ -22,7 +22,12 @@ def cluster_sum_rates(
     g_near = max(g_a, g_b)
     g_far = min(g_a, g_b)
 
-    inter_cluster = max(num_clusters - 1, 0) * power * interference_gain
+    inter_cluster = (
+        max(num_clusters - 1, 0)
+        * power
+        * interference_gain
+        * params.get('interference_leakage', 1e-5)
+    )
 
     oma = 0.5 * kappa * (
         np.log2(1.0 + power * g_near / (noise + inter_cluster))
