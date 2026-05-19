@@ -1,53 +1,14 @@
 # SWIPT-NOMA in Cell-Free Massive MIMO
 
-Simulation code for the paper **SWIPT-NOMA in Cell-Free Massive MIMO**.
+Simulation and figure-reconstruction code for **SWIPT-NOMA in Cell-Free Massive MIMO**.
 
-This repository contains the simulation framework used to evaluate simultaneous wireless information and power transfer (SWIPT) with non-orthogonal multiple access (NOMA) in a cell-free massive MIMO network.
+This repository generates the simulation-result figures from the paper:
 
-## Overview
+- Fig. 2: ergodic sum capacity versus number of users, rho = 1
+- Fig. 3: ergodic sum capacity versus number of users, rho = 0.85
+- Fig. 4: ergodic sum capacity versus power-splitting ratio
 
-The implementation includes:
-
-- distributed access point deployment
-- AP-user serving association
-- path loss and log-normal shadowing
-- Rayleigh fading channels
-- SWIPT-assisted relaying
-- SIC-aware NOMA SINR modeling
-- SWIPT-NOMA, conventional NOMA, and OMA baselines
-- Figure 1 system model generation
-- Figure 2 ergodic capacity generation
-- validation tests and CI
-
-## Repository structure
-
-```text
-src/
-  paper_params.py
-  topology.py
-  fading.py
-  ap_association.py
-  channel_realization.py
-  paper_simulation.py
-  link_budget.py
-  clustering.py
-  schemes.py
-  plotting.py
-
-scripts/
-  rebuild_fig1.py
-  rebuild_fig2.py
-
-tests/
-  test_pipeline.py
-
-main.py
-run.sh
-VALIDATION.md
-requirements.txt
-```
-
-## Installation
+## Install
 
 ```bash
 python -m venv .venv
@@ -55,7 +16,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-On macOS/Linux:
+For macOS/Linux:
 
 ```bash
 python -m venv .venv
@@ -66,14 +27,15 @@ pip install -r requirements.txt
 ## Generate figures
 
 ```bash
-python scripts/rebuild_fig1.py
-python scripts/rebuild_fig2.py --mc 500
+python scripts/rebuild_fig2.py
+python scripts/rebuild_fig3.py
+python scripts/rebuild_fig4.py
 ```
 
-To run the complete workflow:
+To generate all figures:
 
 ```bash
-python main.py --mc 500
+python main.py
 ```
 
 or
@@ -85,9 +47,12 @@ bash run.sh
 ## Outputs
 
 ```text
-figures/figure1_system_model.png
 figures/figure2_ergodic_capacity.png
+figures/figure3_ergodic_capacity_rho085.png
+figures/figure4_power_splitting_ratio.png
 results/figure2_results.csv
+results/figure3_results.csv
+results/figure4_results.csv
 ```
 
 ## Validation
