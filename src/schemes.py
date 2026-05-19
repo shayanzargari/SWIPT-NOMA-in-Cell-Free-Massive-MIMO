@@ -8,41 +8,73 @@ def dbm_to_watt(dbm):
 class SchemeEvaluator:
     def __init__(self, cfg):
         self.cfg = cfg
-        self.tx_power = dbm_to_watt(cfg.tx_power_dbm)
+        self.tx_power = dbm_to_watt(getattr(cfg, 'ap_tx_power_dbm', 30.0))
+        self.relay_power = dbm_to_watt(getattr(cfg, 'relay_tx_power_dbm', 20.0))
         self.noise = dbm_to_watt(cfg.noise_power_dbm)
 
     def shannon(self, sinr):
-        return np.log2(1 + sinr)
+        return np.log2(1.0 + np.maximum(sinr, 1e-12))
 
     def swipt_noma_rate(self, near_gain, far_gain):
-        harvested = self.cfg.swipt_efficiency * self.cfg.power_split * near_gain
+        alpha_far = self.cfg.noma_alpha_far
+        alpha_near = self.cfg.noma_alpha_near
 
-        far_sinr = (
-            self.cfg.noma_alpha_far * self.tx_power * far_gain
-        ) / (
-            self.cfg.noma_alpha_near * self.tx_power * far_gain + self.noise)
+        direct_far = alpha_far * self.tx_power * far_gain
+        direct_interference = alpha_near * self.tx_power * far_gain
 
-        relay_boost = harvested * near_gain
+        far_sinr_direct = direct_far / (
+            direct_interference + self.noise
+        )
+
+        harvested_energy = (
+            self.cfg.swipt_efficiency
+            * self.cfg.power_split
+            * self.tx_power
+            * near_gain
+        )
+
+        relay_component = harvested_energy * near_gain
+
+        combined_far_sinr = far_sinr_direct + (
+            relay_component / self.noise
+        )
+
+        sic_noise = self.cfg.sic_residual * self.tx_power * near_gain
 
         near_sinr = (
-            self.cfg.noma_alpha_near * self.tx_power * near_gain + relay_boost
-        ) / self.noise
+            alpha_near * self.tx_power * near_gain
+        ) / (
+            self.noise + sic_noise
+        )
 
-        return self.shannon(far_sinr) + self.shannon(near_sinr)
+        return (
+            self.shannon(combined_far_sinr)
+            + self.shannon(near_sinr)
+        )
 
     def conventional_noma_rate(self, near_gain, far_gain):
+        alpha_far = self.cfg.noma_alpha_far
+        alpha_near = self.cfg.noma_alpha_near
+
         far_sinr = (
-            self.cfg.noma_alpha_far * self.tx_power * far_gain
+            alpha_far * self.tx_power * far_gain
         ) / (
-            self.cfg.noma_alpha_near * self.tx_power * far_gain + self.noise)
+            alpha_near * self.tx_power * far_gain + self.noise
+        )
 
         near_sinr = (
-            self.cfg.noma_alpha_near * self.tx_power * near_gain
+            alpha_near * self.tx_power * near_gain
         ) / self.noise
 
         return self.shannon(far_sinr) + self.shannon(near_sinr)
 
     def oma_rate(self, near_gain, far_gain):
-        near = 0.5 * self.shannon(self.tx_power * near_gain / self.noise)
-        far = 0.5 * self.shannon(self.tx_power * far_gain / self.noise)
-        return near + far
+        near_rate = 0.5 * self.shannon(
+            self.tx_power * near_gain / self.noise
+        )
+
+        far_rate = 0.5 * self.shannon(
+            self.tx_power * far_gain / self.noise
+        )
+
+        return near_rate + far_rate
