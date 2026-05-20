@@ -120,6 +120,14 @@ def prelog_oma(num_clusters, params):
     return max((tc - tau) / tc, 0.0)
 
 
+def inter_cluster_interference(C, cluster_idx, user_idx, p_cluster):
+    interference = 0.0
+    for other in range(C.shape[0]):
+        if other != cluster_idx:
+            interference += p_cluster * np.abs(C[other, cluster_idx, user_idx]) ** 2
+    return interference
+
+
 def exact_harvested_power(C, cluster_idx, beta_ps, eta, p_cluster, symbols):
     received_rf = np.sum(np.sqrt(p_cluster) * C[:, cluster_idx, 0] * symbols)
     return beta_ps * eta * np.abs(received_rf) ** 2
@@ -134,18 +142,12 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols
     p1 = params['power_ratio_near'] * p_cluster
     p2 = params['power_ratio_far'] * p_cluster
 
-    n = C.shape[0]
     c11 = C[cluster_idx, cluster_idx, 0]
     c12 = C[cluster_idx, cluster_idx, 1]
     ec11 = EC[cluster_idx, 0]
 
-    inter_head = 0.0
-    inter_far = 0.0
-    for other in range(n):
-        if other == cluster_idx:
-            continue
-        inter_head += p_cluster * np.abs(C[other, cluster_idx, 0]) ** 2
-        inter_far += p_cluster * np.abs(C[other, cluster_idx, 1]) ** 2
+    inter_head = inter_cluster_interference(C, cluster_idx, 0, p_cluster)
+    inter_far = inter_cluster_interference(C, cluster_idx, 1, p_cluster)
 
     sic_expr = p2 * (
         np.abs(c11) ** 2
@@ -174,8 +176,13 @@ def conventional_noma_rate(C, cluster_idx, params, kappa, p_cluster):
     p2 = params['power_ratio_far'] * p_cluster
     c1 = C[cluster_idx, cluster_idx, 0]
     c2 = C[cluster_idx, cluster_idx, 1]
-    r1 = np.log2(1.0 + p1 * np.abs(c1) ** 2 / sigma2)
-    r2 = np.log2(1.0 + (p2 * np.abs(c2) ** 2) / (p1 * np.abs(c2) ** 2 + sigma2))
+    inter_head = inter_cluster_interference(C, cluster_idx, 0, p_cluster)
+    inter_far = inter_cluster_interference(C, cluster_idx, 1, p_cluster)
+
+    r1 = np.log2(1.0 + p1 * np.abs(c1) ** 2 / (sigma2 + inter_head))
+    r2 = np.log2(
+        1.0 + (p2 * np.abs(c2) ** 2) / (p1 * np.abs(c2) ** 2 + sigma2 + inter_far)
+    )
     return float(kappa * (r1 + r2))
 
 
@@ -265,7 +272,9 @@ def simulate_power_splitting(params=None):
         total_1 = 0.0
         total_085 = 0.0
         for _ in range(cfg['monte_carlo']):
+            state = rng.bit_generator.state
             _, _, rate_1 = one_realization(fig4_users, beta_ps, 1.0, cfg, rng)
+            rng.bit_generator.state = state
             _, _, rate_085 = one_realization(fig4_users, beta_ps, 0.85, cfg, rng)
             total_1 += rate_1
             total_085 += rate_085
