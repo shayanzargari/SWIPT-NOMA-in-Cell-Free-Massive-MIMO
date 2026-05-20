@@ -2,6 +2,7 @@ from pathlib import Path
 
 from src.paper_result_curves import figure2_curves, figure3_curves, figure4_curves
 from src.plotting import plot_power_splitting_curves, plot_user_capacity_curves
+from src.validation import validate_capacity_scale
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -12,10 +13,12 @@ FIGURES_DIR.mkdir(exist_ok=True)
 RESULTS_DIR.mkdir(exist_ok=True)
 
 fig2 = figure2_curves()
+validate_capacity_scale(fig2)
 fig2.to_csv(RESULTS_DIR / 'figure2_results.csv', index=False)
 plot_user_capacity_curves(fig2, FIGURES_DIR / 'figure2_ergodic_capacity.png')
 
 fig3 = figure3_curves()
+validate_capacity_scale(fig3)
 fig3.to_csv(RESULTS_DIR / 'figure3_results.csv', index=False)
 plot_user_capacity_curves(fig3, FIGURES_DIR / 'figure3_ergodic_capacity_rho085.png')
 
