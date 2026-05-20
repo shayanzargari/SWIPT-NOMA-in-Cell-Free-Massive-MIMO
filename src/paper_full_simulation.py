@@ -157,7 +157,7 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols
     )
     sic_prop = safe_real_power(sic_expr)
     head_den = sic_prop + inter_head + sigma2 / max(1.0 - beta_ps, 1e-12)
-    sinr_head = (np.abs(ec11) ** 2 * p1) / max(head_den, 1e-30)
+    sinr_head = (np.abs(c11) ** 2 * p1) / max(head_den, 1e-30)
 
     p_eh = exact_harvested_power(C, cluster_idx, beta_ps, params['swipt_efficiency'], p_cluster, symbols)
     relay_signal = np.sqrt(max(p_eh, 0.0)) * np.abs(h12) / rho_safe
@@ -245,7 +245,9 @@ def simulate_users(rho, params=None):
             totals[f'swipt_noma_case{case_idx}'] = 0.0
 
         for _ in range(cfg['monte_carlo']):
+            state = rng.bit_generator.state
             for case_idx, beta_ps in enumerate(cfg['beta_cases'], start=1):
+                rng.bit_generator.state = state
                 oma, noma, swipt = one_realization(num_users, beta_ps, rho, cfg, rng)
                 if case_idx == 1:
                     totals['oma'] += oma
