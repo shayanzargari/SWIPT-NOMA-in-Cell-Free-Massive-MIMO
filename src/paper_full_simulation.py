@@ -141,6 +141,7 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
     p1 = params['power_ratio_near'] * p_cluster
     p2 = params['power_ratio_far'] * p_cluster
+    rho_safe = max(rho, 1e-12)
 
     c11 = C[cluster_idx, cluster_idx, 0]
     c12 = C[cluster_idx, cluster_idx, 1]
@@ -159,11 +160,11 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols
     sinr_head = (np.abs(ec11) ** 2 * p1) / max(head_den, 1e-30)
 
     p_eh = exact_harvested_power(C, cluster_idx, beta_ps, params['swipt_efficiency'], p_cluster, symbols)
-    relay_signal = rho * np.sqrt(max(p_eh, 0.0)) * h12
+    relay_signal = np.sqrt(max(p_eh, 0.0)) * np.abs(h12) / rho_safe
     direct_signal = c12 * np.sqrt(p2)
     numerator_far = np.abs(direct_signal + relay_signal) ** 2
 
-    relay_error = p_eh * np.abs(h12) ** 2 * max(1.0 - rho ** 2, 0.0)
+    relay_error = p_eh * np.abs(h12) ** 2 * max(1.0 - rho ** 2, 0.0) / (rho_safe ** 2)
     denominator_far = np.abs(c12) ** 2 * p1 + inter_far + relay_error + sigma2
     sinr_far = numerator_far / max(denominator_far, 1e-30)
 
