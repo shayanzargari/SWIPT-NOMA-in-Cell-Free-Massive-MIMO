@@ -76,16 +76,10 @@ def c_matrix(h, phases):
 
 
 def expected_c_monte_carlo(mu, samples, rng):
-    m, n, k = mu.shape
-    acc = np.zeros((n, k), dtype=complex)
-
-    for _ in range(samples):
-        v = cn((m, n), rng)
-        h_hat = np.sqrt(np.maximum(mu, 0.0)) * v[:, :, None]
-        phase = beamforming_phases(v)
-        acc += np.einsum('mnk,mn->nk', h_hat, phase)
-
-    return acc / max(samples, 1)
+    samples = max(int(samples), 1)
+    magnitudes = np.abs(cn((samples, mu.shape[0], mu.shape[1]), rng))
+    sqrt_mu = np.sqrt(np.maximum(mu, 0.0))
+    return np.einsum('smn,mnk->nk', magnitudes, sqrt_mu) / samples
 
 
 def inter_user_channel(users, pair, params, rng):
