@@ -112,6 +112,10 @@ def exact_harvested_power(C, cluster_idx, beta_ps, eta, p_cluster, symbols):
     return beta_ps * eta * np.abs(received_rf) ** 2
 
 
+def safe_real_power(value):
+    return max(float(np.real(value)), 0.0)
+
+
 def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols):
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
     p1 = params['power_ratio_near'] * p_cluster
@@ -130,14 +134,14 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols
         inter_head += p_cluster * np.abs(C[other, cluster_idx, 0]) ** 2
         inter_far += p_cluster * np.abs(C[other, cluster_idx, 1]) ** 2
 
-    sic_prop = p2 * (
+    sic_expr = p2 * (
         np.abs(c11) ** 2
         + np.abs(ec11) ** 2
         - 2.0 * rho * np.real(c11 * np.conj(ec11))
     )
-    sinr_head = (np.abs(ec11) ** 2 * p1) / (
-        sic_prop + inter_head + sigma2 / max(1.0 - beta_ps, 1e-12)
-    )
+    sic_prop = safe_real_power(sic_expr)
+    head_den = sic_prop + inter_head + sigma2 / max(1.0 - beta_ps, 1e-12)
+    sinr_head = (np.abs(ec11) ** 2 * p1) / max(head_den, 1e-30)
 
     p_eh = exact_harvested_power(C, cluster_idx, beta_ps, params['swipt_efficiency'], p_cluster, symbols)
     relay_signal = rho * np.sqrt(max(p_eh, 0.0)) * h12
@@ -148,7 +152,7 @@ def eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols
     denominator_far = np.abs(c12) ** 2 * p1 + inter_far + relay_error + sigma2
     sinr_far = numerator_far / max(denominator_far, 1e-30)
 
-    return sinr_head, sinr_far
+    return float(max(sinr_head, 0.0)), float(max(sinr_far, 0.0))
 
 
 def conventional_noma_rate(C, cluster_idx, params, kappa, p_cluster):
