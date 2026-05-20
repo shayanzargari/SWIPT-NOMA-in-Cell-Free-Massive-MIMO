@@ -43,32 +43,39 @@ def deploy(num_users, params, rng):
     return aps, users, pairs
 
 
-def pair_arrays(aps, users, pairs, params, rng):
+def beta_arrays(aps, users, pairs, params):
     m = params['num_aps']
     n = len(pairs)
     beta = np.zeros((m, n, 2))
-    h = np.zeros((m, n, 2), dtype=complex)
 
     for cluster_idx, (u1, u2) in enumerate(pairs):
         for local_idx, user_idx in enumerate((u1, u2)):
             distances = np.linalg.norm(aps - users[user_idx], axis=1)
             beta[:, cluster_idx, local_idx] = path_loss(distances, params)
-            h[:, cluster_idx, local_idx] = np.sqrt(beta[:, cluster_idx, local_idx]) * cn(m, rng)
 
-    return beta, h
+    return beta
 
 
-def reorder_cluster_heads(beta, h):
+def build_correlated_channels(beta, mu, v, rng):
+    estimation = np.sqrt(np.maximum(mu, 0.0)) * v[:, :, None]
+    error_var = np.maximum(beta - mu, 0.0)
+    error = np.sqrt(error_var) * cn(beta.shape, rng)
+    return estimation + error
+
+
+def reorder_cluster_heads(beta, mu, h):
     ordered_beta = beta.copy()
+    ordered_mu = mu.copy()
     ordered_h = h.copy()
     effective = np.sum(np.abs(h) ** 2, axis=0)
 
     for cluster_idx in range(beta.shape[1]):
         if effective[cluster_idx, 1] > effective[cluster_idx, 0]:
             ordered_beta[:, cluster_idx, :] = ordered_beta[:, cluster_idx, [1, 0]]
+            ordered_mu[:, cluster_idx, :] = ordered_mu[:, cluster_idx, [1, 0]]
             ordered_h[:, cluster_idx, :] = ordered_h[:, cluster_idx, [1, 0]]
 
-    return ordered_beta, ordered_h
+    return ordered_beta, ordered_mu, ordered_h
 
 
 def enforce_ap_power(num_clusters, params):
@@ -211,12 +218,14 @@ def oma_rate(h, cluster_idx, params, kappa, p_cluster):
 def one_realization(num_users, beta_ps, rho, params, rng):
     aps, users, pairs = deploy(num_users, params, rng)
     num_clusters = len(pairs)
-    beta, h = pair_arrays(aps, users, pairs, params, rng)
-    beta, h = reorder_cluster_heads(beta, h)
+    beta = beta_arrays(aps, users, pairs, params)
 
     tau = min(num_clusters, params['coherence_block'])
     mu = mmse_mu(beta, params, tau)
     v = shared_pilot_variable(mu, rng)
+    h = build_correlated_channels(beta, mu, v, rng)
+    beta, mu, h = reorder_cluster_heads(beta, mu, h)
+
     estimated_phases = beamforming_phases(v)
     reference_phases = head_channel_phases(h)
     C_estimated = c_matrix(h, estimated_phases)
