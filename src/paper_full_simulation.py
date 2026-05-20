@@ -9,7 +9,26 @@ def cn(shape, rng):
     return (rng.normal(size=shape) + 1j * rng.normal(size=shape)) / np.sqrt(2.0)
 
 
+def even_user_counts(params):
+    start = int(params['num_users_min'])
+    stop = int(params['num_users_max'])
+    step = int(params['user_step'])
+    values = []
+
+    for user_count in range(start, stop + 1, step):
+        if user_count % 2 == 0:
+            values.append(user_count)
+
+    if stop % 2 == 0 and stop not in values:
+        values.append(stop)
+
+    return values
+
+
 def deploy(num_users, params, rng):
+    if num_users % 2 != 0:
+        raise ValueError('The paper model requires an even number of users, K = 2N.')
+
     area = params['area_size']
     aps = rng.uniform(0.0, area, size=(params['num_aps'], 2))
     users = rng.uniform(0.0, area, size=(num_users, 2))
@@ -212,7 +231,7 @@ def simulate_users(rho, params=None):
     rng = np.random.default_rng(cfg['seed'] + int(1000 * rho))
     rows = []
 
-    for num_users in range(cfg['num_users_min'], cfg['num_users_max'] + 1, cfg['user_step']):
+    for num_users in even_user_counts(cfg):
         totals = {'oma': 0.0, 'conventional_noma': 0.0}
         for case_idx in range(1, 4):
             totals[f'swipt_noma_case{case_idx}'] = 0.0
@@ -238,7 +257,9 @@ def simulate_power_splitting(params=None):
         cfg.update(params)
     rng = np.random.default_rng(cfg['seed'] + 404)
     rows = []
-    fig4_users = cfg.get('figure4_users', 200)
+    fig4_users = int(cfg.get('figure4_users', 200))
+    if fig4_users % 2 != 0:
+        raise ValueError('figure4_users must be even because K = 2N.')
 
     for beta_ps in np.round(np.arange(0.02, 0.91, 0.02), 2):
         total_1 = 0.0
