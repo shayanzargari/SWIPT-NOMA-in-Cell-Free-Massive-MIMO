@@ -15,8 +15,15 @@ def even_user_counts(params):
     step = int(params['user_step'])
     values = []
 
-    for user_count in range(start, stop + 1, step):
-        if user_count % 2 == 0:
+    if start % 2 == 0 and start <= stop:
+        values.append(start)
+
+    grid_start = max(step, int(np.ceil(start / step)) * step)
+    if grid_start % 2 != 0:
+        grid_start += step
+
+    for user_count in range(grid_start, stop + 1, step):
+        if user_count % 2 == 0 and user_count not in values:
             values.append(user_count)
 
     if stop % 2 == 0 and stop not in values:
