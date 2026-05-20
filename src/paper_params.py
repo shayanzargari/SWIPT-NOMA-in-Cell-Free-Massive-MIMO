@@ -3,7 +3,7 @@ PAPER_PARAMS = {
     'num_aps': 100,
     'num_users_min': 2,
     'num_users_max': 400,
-    'user_step': 5,
+    'user_step': 10,
     'monte_carlo': 100,
     'coherence_block': 200,
     'bandwidth_hz': 20e6,
