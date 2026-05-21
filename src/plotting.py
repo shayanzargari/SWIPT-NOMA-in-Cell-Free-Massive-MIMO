@@ -7,9 +7,8 @@ def ensure_dir(path):
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def _setup_axes(ax, xlim, ylim, xlabel):
+def _setup_axes(ax, xlim, xlabel):
     ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
     ax.set_xlabel(xlabel, fontsize=12)
     ax.set_ylabel('Ergodic Sum Capacity (bps/Hz)', fontsize=12)
     ax.grid(True, linestyle='--', linewidth=0.8, color='black', alpha=0.8)
@@ -30,9 +29,8 @@ def plot_user_capacity_curves(df, output_path):
     ax.plot(df['users'], df['swipt_noma_case2'], color='blue', linewidth=2.0, label='SWIPT-NOMA  Case2')
     ax.plot(df['users'], df['swipt_noma_case3'], color='#b03060', linewidth=2.0, linestyle='-.', label='SWIPT-NOMA  Case3')
 
-    _setup_axes(ax, (0, 400), (0, 12), 'Number of Users')
+    _setup_axes(ax, (0, 400), 'Number of Users')
     ax.set_xticks(range(0, 401, 50))
-    ax.set_yticks(range(0, 13, 2))
     ax.legend(loc='upper right', frameon=True, fancybox=False, edgecolor='black', fontsize=11)
 
     fig.tight_layout()
@@ -65,9 +63,8 @@ def plot_power_splitting_curves(df, output_path):
         label='ρ=0.85',
     )
 
-    _setup_axes(ax, (0, 0.92), (3, 10), 'Power Splitting Ratio')
+    _setup_axes(ax, (0, 0.92), 'Power Splitting Ratio')
     ax.set_xticks([i / 10 for i in range(0, 10)])
-    ax.set_yticks(range(3, 11, 1))
     ax.legend(loc='upper left', frameon=True, fancybox=False, edgecolor='black', fontsize=11)
 
     fig.tight_layout()
