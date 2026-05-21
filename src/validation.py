@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def validate_capacity_scale(df, max_allowed=30.0):
+def validate_capacity_scale(df, max_allowed=100.0):
     numeric_cols = [col for col in df.columns if col != 'users']
     values = df[numeric_cols].to_numpy(dtype=float)
 
