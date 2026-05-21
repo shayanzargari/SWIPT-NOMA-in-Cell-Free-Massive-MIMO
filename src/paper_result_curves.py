@@ -2,9 +2,7 @@ from src.paper_full_simulation import simulate_power_splitting, simulate_users
 
 
 def _figure_params(params=None):
-    cfg = {} if params is None else dict(params)
-    cfg['rate_output'] = 'average'
-    return cfg
+    return {} if params is None else dict(params)
 
 
 def figure2_curves(params=None):
