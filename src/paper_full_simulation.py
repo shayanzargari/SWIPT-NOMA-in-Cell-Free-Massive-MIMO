@@ -104,6 +104,11 @@ def beamforming_phases(v):
     return np.conj(v) / np.maximum(np.abs(v), 1e-15)
 
 
+def head_channel_phases(h):
+    head_channels = h[:, :, 0]
+    return np.conj(head_channels) / np.maximum(np.abs(head_channels), 1e-15)
+
+
 def c_matrix(h, phases):
     return np.einsum('mrk,mt->trk', h, phases)
 
@@ -129,9 +134,7 @@ def prelog_noma(num_clusters, params):
 
 
 def prelog_oma(num_clusters, params):
-    tc = params['coherence_block']
-    tau = min(2 * num_clusters, tc)
-    return max((tc - tau) / tc, 0.0)
+    return prelog_noma(num_clusters, params)
 
 
 def inter_cluster_interference(C, cluster_idx, user_idx, p_cluster):
@@ -205,8 +208,10 @@ def oma_rate(C, cluster_idx, params, kappa, p_cluster):
     sigma2 = dbm_to_watt(params['noise_power_dbm'])
     c1 = C[cluster_idx, cluster_idx, 0]
     c2 = C[cluster_idx, cluster_idx, 1]
-    r1 = np.log2(1.0 + p_cluster * np.abs(c1) ** 2 / sigma2)
-    r2 = np.log2(1.0 + p_cluster * np.abs(c2) ** 2 / sigma2)
+    inter_head = inter_cluster_interference(C, cluster_idx, 0, p_cluster)
+    inter_far = inter_cluster_interference(C, cluster_idx, 1, p_cluster)
+    r1 = np.log2(1.0 + p_cluster * np.abs(c1) ** 2 / (sigma2 + inter_head))
+    r2 = np.log2(1.0 + p_cluster * np.abs(c2) ** 2 / (sigma2 + inter_far))
     return float(0.5 * kappa * (r1 + r2))
 
 
@@ -221,8 +226,10 @@ def one_realization(num_users, beta_ps, rho, params, rng):
     h = build_correlated_channels(beta, mu, v, rng)
     beta, mu, h = reorder_cluster_heads(beta, mu, h)
 
-    phases = beamforming_phases(v)
-    C = c_matrix(h, phases)
+    estimated_phases = beamforming_phases(v)
+    reference_phases = head_channel_phases(h)
+    C_estimated = c_matrix(h, estimated_phases)
+    C_reference = c_matrix(h, reference_phases)
     EC = expected_c_monte_carlo(mu, params['expectation_samples'], rng)
 
     p_cluster = enforce_ap_power(num_clusters, params)
@@ -236,10 +243,10 @@ def one_realization(num_users, beta_ps, rho, params, rng):
 
     for cluster_idx, pair in enumerate(pairs):
         h12 = inter_user_channel(users, pair, params, rng)
-        sinr1, sinr2 = eq17_rates(C, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols)
+        sinr1, sinr2 = eq17_rates(C_estimated, EC, h12, cluster_idx, beta_ps, rho, params, p_cluster, symbols)
         swipt += kappa_noma * (np.log2(1.0 + sinr1) + np.log2(1.0 + sinr2))
-        noma += conventional_noma_rate(C, cluster_idx, params, kappa_noma, p_cluster)
-        oma += oma_rate(C, cluster_idx, params, kappa_oma, p_cluster)
+        noma += conventional_noma_rate(C_reference, cluster_idx, params, kappa_noma, p_cluster)
+        oma += oma_rate(C_reference, cluster_idx, params, kappa_oma, p_cluster)
 
     if params.get('rate_output', 'sum') == 'average':
         divisor = max(num_clusters, 1)
